@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# old nested copy — superseded by this directory, has its own .git so it
+# would otherwise get added as a stray embedded repo
+/portfolio_v1
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

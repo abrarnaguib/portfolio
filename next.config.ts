@@ -8,8 +8,17 @@ import type { NextConfig } from "next";
 // export-only issue (a route that can't be statically rendered, next/image
 // needing its optimizer server, etc.) surfaces while there's no live URL
 // riding on it yet.
+// GitHub Pages serves this as a project site at
+// https://<user>.github.io/portfolio/, not the domain root, so every
+// generated path (JS/CSS chunks, next/image URLs, next/link hrefs) needs
+// the "/portfolio" prefix baked in or the deployed site 404s on everything
+// but the homepage.
+const basePath = "/portfolio";
+
 const nextConfig: NextConfig = {
   output: "export",
+  basePath,
+  assetPrefix: basePath,
   // next/image's built-in optimizer resizes/re-encodes images through a
   // server route — there is no server in a static export, so every image
   // has to ship as-is instead.

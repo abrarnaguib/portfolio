@@ -28,7 +28,10 @@ import { useReducedMotion } from "framer-motion";
  * *values*, not a few thousand independent points reacting to input.
  */
 
-const PHOTO_SRC = "/images/portfolio-pic.png";
+// Loaded via a plain `Image()`, not next/image, so it doesn't get the
+// basePath auto-prepended — has to be hardcoded here to match
+// next.config.ts's basePath for the GitHub Pages deploy.
+const PHOTO_SRC = "/portfolio/images/portfolio-pic.png";
 
 const GRID_SPACING = 5; // px between candidate sample points, before alpha-masking
 const GLYPH_SIZE = 7; // px — font size the glyphs render at
