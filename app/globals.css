@@ -1,0 +1,326 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — locked palette + type from the build plan (§5).
+ * Committing to one dark, high-contrast look on purpose rather than building
+ * a light/dark toggle: Persona 5's own UI never runs a light mode, and this
+ * is the section of the plan we were told to go bonkers in, not hedge in.
+ * Revisit only if a calmer/lighter variant is ever actually wanted later.
+ */
+@theme {
+  --color-ink: #161311;       /* page background */
+  --color-surface: #2b2521;   /* raised panel background — neutral dark charcoal, not accent-tinted. The maroon tried earlier read as muddy; this stays clean black-and-red with red doing the accent work instead of the fill */
+  --color-paper: #f4efe6;     /* primary text / light surfaces */
+  --color-thief-red: #dc1f2e; /* the one accent — emphasis, selection, rules, backgrounds */
+  --color-thief-red-dim: #7a1017; /* red at rest / pressed states */
+  /* thief-red as literal TEXT color on ink/surface fails WCAG AA (3.08–3.77:1
+     measured against the two dark backgrounds it actually sits on — needs
+     4.5:1 for normal-size text). This is the same hue lightened just enough
+     to clear 4.5:1 against the worse of the two (surface, #2b2521 — a
+     panel's raised fill is slightly lighter than the page ink, which
+     paradoxically lowers a red foreground's contrast against it) while
+     staying comfortably clear of ink too. Reserved for text specifically —
+     bg-thief-red (dividers, fills, the wipe) keeps using the vivid brand
+     red above, which never needs to contrast against itself. */
+  --color-thief-red-text: #f3595e;
+  --color-gold: #c9a24b;      /* achievement/rank moments only */
+  --color-smoke: #8a8178;     /* secondary text, borders */
+  --color-cyan: #2ee0e8;      /* second particle-portrait accent (ParticlePortrait.tsx) — a red/cyan pairing, not used anywhere else on purpose so it stays that one component's own thing rather than a third site-wide accent competing with red */
+
+  --font-display: var(--font-bebas-neue), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+}
+
+html,
+body {
+  /* Panel's offset shadow/hover-fill boxes deliberately peek out past the
+     card's own edge (see Panel.tsx) — a few pixels of bleed that's
+     invisible on desktop where max-w-5xl leaves margin to spare, but on a
+     narrow viewport the content column nearly fills the screen already,
+     so that bleed pushes past the true viewport edge and widens the whole
+     document, adding an unwanted horizontal scrollbar to every page that
+     uses Panel (confirmed: every route that renders one — /about,
+     /projects, /projects/[slug], /achievements, /style-guide — measured
+     wider than its own viewport at 375px). Clipping it here keeps the
+     peek-out effect wherever there's room for it and simply crops it at
+     the true edge otherwise, rather than growing the page to fit it.
+  */
+  overflow-x: hidden;
+}
+
+body {
+  font-feature-settings: "tnum" 1; /* tabular numerals wherever digits line up */
+  /* Faint diagonal hairline texture so the page reads as printed/silkscreened
+     rather than a flat fill — subtle on purpose, it's a backdrop, not a mark. */
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 48px,
+    color-mix(in srgb, var(--color-thief-red) 16%, transparent) 48px 50px
+  );
+}
+
+::selection {
+  background: var(--color-thief-red);
+  color: var(--color-ink);
+}
+
+/*
+ * Keyboard focus — gold rather than the browser default (or the site's own
+ * red/paper), since it needs to read clearly against every background the
+ * site actually puts a focusable element on: ink, surface, *and* the red
+ * tab fill itself once revealed. Nothing anywhere sets `outline: none`, so
+ * this is the only focus treatment in play — every link, button, and card
+ * gets it for free, not just the ones called out below by name.
+ * `:focus-visible` (not `:focus`) so it shows for keyboard/programmatic
+ * focus but not for a mouse click landing on the same element.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/*
+ * Clip-path utilities — the reusable "cut corner" primitive almost every P5
+ * panel is built from. Two sizes cover a card-sized element and a
+ * section/hero-sized one; add more only if a real layout needs a third.
+ */
+@utility clip-corner {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 1.25rem),
+    calc(100% - 1.25rem) 100%,
+    0 100%
+  );
+}
+
+@utility clip-corner-lg {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 3rem),
+    calc(100% - 3rem) 100%,
+    0 100%
+  );
+}
+
+@utility clip-corner-both {
+  clip-path: polygon(
+    1.25rem 0,
+    100% 0,
+    100% calc(100% - 1.25rem),
+    calc(100% - 1.25rem) 100%,
+    0 100%,
+    0 1.25rem
+  );
+}
+
+/*
+ * Diagonal band for the route-transition wipe (PageTransition.tsx). A
+ * parallelogram via clip-path, not a rectangle skewed via `transform` —
+ * Framer Motion drives `transform` on this element itself (translateX, for
+ * the sweep), and an animated transform fully replaces a static one rather
+ * than composing with it. clip-path is a separate property, so the two
+ * mechanisms never fight over the same one.
+ */
+@utility clip-band {
+  clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
+}
+
+/* Same idea, rotated for a band that sweeps vertically (top/bottom) —
+   the diagonal cut sits on the top/bottom edges instead of the sides. */
+@utility clip-band-v {
+  clip-path: polygon(0 12%, 100% 0, 100% 88%, 0 100%);
+}
+
+/*
+ * Tab fill — the skewed color block behind a nav item or a SectionTab
+ * heading. Two layers: a red one and a white one, mirrored (opposite skew)
+ * and swaying in opposite directions, white painted behind red via DOM
+ * order (both are position:absolute with z-index:auto, so source order
+ * decides stacking). Shared between Nav (revealed on hover, or
+ * permanently on the active route) and SectionTab (always in the "active"
+ * state, since rendering one means you're already on that page).
+ *
+ * `clip-path` (a separate property) does the one-shot reveal via a plain
+ * transition; `transform` alone carries a single continuous keyframe
+ * animation for the skew *and* the sway together. An earlier version tried
+ * splitting skew/scale/sway across `transform` plus the independent
+ * `scale`/`translate` properties and it silently failed to paint at all —
+ * every property here is driven by exactly one mechanism.
+ */
+@keyframes tab-sway-red {
+  from {
+    transform: skewX(-12deg) translateX(-3px);
+  }
+  to {
+    transform: skewX(-12deg) translateX(3px);
+  }
+}
+
+@keyframes tab-sway-white {
+  from {
+    transform: skewX(4.5deg) translateX(1.5px);
+  }
+  to {
+    transform: skewX(6deg) translateX(-1.5px);
+  }
+}
+
+.tab-fill {
+  clip-path: inset(0 100% 0 0); /* fully hidden, reveals from the left */
+  transition: clip-path 150ms ease-in;
+}
+
+/* Opposite reveal direction — same mechanic (grow to the fully-revealed
+   inset(0 0 0 0) end state below), just clipped from the left edge instead
+   of the right, so the box appears to sweep in right-to-left. Applied only
+   to SectionTab's white layer, not shared with TabLink/Nav — a modifier
+   on top of .tab-fill rather than a change to it, so Nav's hover reveal
+   keeps its original left-to-right direction. */
+.tab-fill-reverse {
+  clip-path: inset(0 0 0 100%);
+}
+
+.tab-fill-red {
+  transform: skewX(-12deg);
+}
+
+.tab-fill-white {
+  transform: skewX(4.5deg);
+}
+
+/* :focus-visible mirrors :hover on every rule in this block — a keyboard
+   user tabbing through the nav gets the exact same block-reveal +
+   sway a mouse user gets on hover, not just the plain outline above on
+   top of a flat, unrevealed tab. Without this, "operable without a
+   mouse" would technically be true (Enter still activates the link) but
+   the nav's own visual language — which page/item you're on — would
+   silently stop working for keyboard-only navigation. */
+.group:hover .tab-fill:not(.is-active),
+.group:focus-visible .tab-fill:not(.is-active),
+.tab-fill.is-active {
+  clip-path: inset(0 0 0 0);
+}
+
+/* Sway runs on hover/focus (temporary, any tab) *and* permanently on
+   whichever tab is active/current — landing on a page doesn't end the
+   motion. */
+.group:hover .tab-fill-red:not(.is-active),
+.group:focus-visible .tab-fill-red:not(.is-active),
+.tab-fill-red.is-active {
+  animation: tab-sway-red 2.6s ease-in-out infinite alternate;
+}
+
+.group:hover .tab-fill-white:not(.is-active),
+.group:focus-visible .tab-fill-white:not(.is-active),
+.tab-fill-white.is-active {
+  animation: tab-sway-white 2.6s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-fill {
+    transition: none;
+  }
+  .group:hover .tab-fill:not(.is-active),
+  .group:focus-visible .tab-fill:not(.is-active),
+  .tab-fill.is-active {
+    clip-path: inset(0 0 0 0);
+    animation: none;
+  }
+}
+
+/*
+ * Panel hover fill — an extra white box that sweeps in on hover, alongside
+ * the permanent offset shadow box Panel already renders (see Panel.tsx).
+ * Same clip-path-driven wipe mechanic as .tab-fill (reveals left-to-right,
+ * unlike SectionTab's reversed one above) and deliberately *not* the same
+ * class — .tab-fill's hidden state is shared with Nav's hover reveal and
+ * SectionTab's permanent sway, neither of which this needs.
+ *
+ * Positioned as the mirror image of the shadow box: shadow sits offset
+ * down-right with a slight negative rotate (see Panel.tsx's
+ * shadowToneClass span); this sits offset up-left with a positive rotate
+ * instead — same distance and angle, opposite corner, opposite sign, on
+ * both axes. The skew magnitudes are swapped from the Nav/SectionTab
+ * convention on purpose: there red leans harder (12deg) than white
+ * (4.5deg); here white leans harder than red, so a hovered card doesn't
+ * just read as a smaller SectionTab reusing the exact same balance.
+ *
+ * `:focus-within`, not `:focus-visible`, gates the keyboard-parity rules
+ * below — unlike TabLink (where `.group` sits directly on the focusable
+ * `<a>`), Panel's `.group` is an ancestor `<div>` one level above the
+ * actual focusable `<Link>`, and `:focus-visible` only ever matches the
+ * exact element that has focus, never an ancestor of it. `:focus-within`
+ * is CSS's purpose-built equivalent for that case (any descendant
+ * focused, not just the element itself) — the trade-off is it also fires
+ * on a mouse click landing on the link, not just keyboard focus, which
+ * just means a brief harmless flash of the same reveal right before the
+ * page navigates away.
+ */
+.panel-hover-fill {
+  clip-path: inset(0 100% 0 0); /* fully hidden, reveals from the left */
+  transition: clip-path 180ms ease-in;
+}
+
+.group:hover .panel-hover-fill,
+.group:focus-within .panel-hover-fill {
+  clip-path: inset(0 0 0 0);
+}
+
+/*
+ * Panel shadow sway — same continuous translateX-oscillation idea as
+ * tab-sway-red/white above, re-scaled to the panel shadow boxes' own
+ * offset/rotate/skew instead of the nav tabs'. Each keyframe restates the
+ * *entire* transform (translate + rotate + skew), not just the piece that
+ * moves — an animated `transform` fully replaces a static one rather than
+ * composing with it (same lesson as the shadow box's own static transform,
+ * see Panel.tsx), so leaving any part out here would mean that part
+ * (the offset, the tilt) simply vanishes for as long as the animation runs.
+ *
+ * `.panel-shadow` (the permanent shadow box, present on every Panel) sways
+ * unconditionally — a plain informational card should still read as
+ * "alive," not just the ones with a hover reveal on top of it. The hover
+ * fill's own sway is scoped to `.group:hover` instead: it's invisible
+ * (clipped to nothing) until hovered anyway, so there's nothing to gain
+ * from running it earlier, same as tab-sway only playing on `.group:hover`
+ * for a non-active tab.
+ */
+@keyframes panel-sway-shadow {
+  from {
+    transform: translate(11px, 14px) rotate(-2deg) skewX(3deg);
+  }
+  to {
+    transform: translate(17px, 14px) rotate(-2deg) skewX(3deg);
+  }
+}
+
+@keyframes panel-sway-hover-fill {
+  from {
+    transform: translate(-17px, -14px) rotate(2deg) skewX(12deg);
+  }
+  to {
+    transform: translate(-11px, -14px) rotate(2deg) skewX(12deg);
+  }
+}
+
+.panel-shadow {
+  animation: panel-sway-shadow 2.6s ease-in-out infinite alternate;
+}
+
+.group:hover .panel-hover-fill,
+.group:focus-within .panel-hover-fill {
+  animation: panel-sway-hover-fill 2.6s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-hover-fill {
+    transition: none;
+  }
+  .panel-shadow,
+  .group:hover .panel-hover-fill,
+  .group:focus-within .panel-hover-fill {
+    animation: none;
+  }
+}
