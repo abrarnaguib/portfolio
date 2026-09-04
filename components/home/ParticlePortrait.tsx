@@ -50,30 +50,25 @@ const GLYPHS = ["★", "✳", "!", "•"];
 // The only three colors a particle is ever allowed to render in. Mirrors
 // --color-thief-red / --color-cyan / --color-smoke in globals.css — canvas
 // fillStyle can't read CSS custom properties directly, so these are the
-// same values by hand (keep them in sync if those tokens ever move), each
-// paired with the plain 0-255 RGB triplet used for nearest-match distance.
-const COLORS = [
-  { r: 220, g: 31, b: 46, css: "rgba(220, 31, 46, 0.9)" }, // thief-red
-  { r: 46, g: 224, b: 232, css: "rgba(46, 224, 232, 0.85)" }, // cyan
-  { r: 138, g: 129, b: 120, css: "rgba(138, 129, 120, 0.85)" }, // smoke
-];
+// same values by hand (keep them in sync if those tokens ever move).
+//
+// Nearest-RGB-distance quantization (an earlier version of this) picks
+// almost entirely smoke grey for a real photo: red (220,31,46) and cyan
+// (46,224,232) are both fully-saturated, far-out colors, while skin/hair/
+// background pixels in an actual photograph are mostly low-saturation —
+// closer to grey than to either accent almost everywhere. Ordering by
+// luminance instead, not raw RGB, is what actually spreads all three
+// colors across the image: sorted by the colors' own brightness, red
+// (~89) is darkest, smoke (~131) sits in the middle, cyan (~172) is
+// brightest, so bucketing each sampled pixel's luminance into thirds and
+// mapping dark/mid/light to red/smoke/cyan reconstructs the photo's real
+// tonal structure — a proper tritone, not an accidental monotone.
+const COLOR_RED = "rgba(220, 31, 46, 0.9)";
+const COLOR_SMOKE = "rgba(138, 129, 120, 0.88)";
+const COLOR_CYAN = "rgba(46, 224, 232, 0.85)";
 
-/** Nearest-color quantization: picks whichever of the three allowed
- *  colors is closest (by squared RGB distance) to the pixel actually
- *  sampled at that point, so the particle cloud stays limited to exactly
- *  three colors while still tracking the photo's real light/dark/hue
- *  structure instead of assigning colors at random. */
-function pickColor(r: number, g: number, b: number): string {
-  let best = COLORS[0];
-  let bestDist = Infinity;
-  for (const c of COLORS) {
-    const dist = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = c;
-    }
-  }
-  return best.css;
+function luminance(r: number, g: number, b: number): number {
+  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
 function pickGlyph(): string {
@@ -180,27 +175,41 @@ export function ParticlePortrait() {
       drawCoverFitted(octx, img, cssW, cssH);
       const { data } = octx.getImageData(0, 0, cssW, cssH);
 
-      const next: Particle[] = [];
+      // First pass: every point inside the alpha mask, with its
+      // luminance. Terciles are computed from *this photo's own*
+      // distribution rather than fixed brightness cutoffs, so the
+      // dark/mid/light split lands roughly one-third each no matter how
+      // the actual photo's tones are distributed.
+      const candidates: { x: number; y: number; lum: number }[] = [];
       for (let y = 0; y < cssH; y += GRID_SPACING) {
         for (let x = 0; x < cssW; x += GRID_SPACING) {
           const idx = (y * cssW + x) * 4;
-          const alpha = data[idx + 3];
-          if (alpha > 128) {
-            next.push({
-              baseX: x,
-              baseY: y,
+          if (data[idx + 3] > 128) {
+            candidates.push({
               x,
               y,
-              vx: 0,
-              vy: 0,
-              seed: Math.random() * Math.PI * 2,
-              glyph: pickGlyph(),
-              color: pickColor(data[idx], data[idx + 1], data[idx + 2]),
+              lum: luminance(data[idx], data[idx + 1], data[idx + 2]),
             });
           }
         }
       }
-      return next;
+      if (candidates.length === 0) return [];
+
+      const sortedLum = candidates.map((c) => c.lum).sort((a, b) => a - b);
+      const darkMidCut = sortedLum[Math.floor(sortedLum.length / 3)];
+      const midLightCut = sortedLum[Math.floor((sortedLum.length * 2) / 3)];
+
+      return candidates.map(({ x, y, lum }) => ({
+        baseX: x,
+        baseY: y,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        seed: Math.random() * Math.PI * 2,
+        glyph: pickGlyph(),
+        color: lum <= darkMidCut ? COLOR_RED : lum <= midLightCut ? COLOR_SMOKE : COLOR_CYAN,
+      }));
     }
 
     function setup(img: HTMLImageElement) {

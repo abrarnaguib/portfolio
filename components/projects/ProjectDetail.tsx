@@ -63,7 +63,7 @@ export function ProjectDetail({ project }: { project: Project }) {
         being buried mid-paragraph.
       */}
       {project.highlights && project.highlights.length > 0 && (
-        <div className="grid gap-8 sm:grid-cols-2 max-w-3xl">
+        <div className="grid gap-18 py-4 sm:grid-cols-2 max-w-3xl">
           {project.highlights.map((highlight, i) => (
             <Panel key={highlight.title} cut="sm" index={i} className="p-7">
               <p className="font-display text-lg uppercase tracking-tight text-thief-red-text mb-3">
