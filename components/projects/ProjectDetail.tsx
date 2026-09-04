@@ -4,28 +4,28 @@ import type { Project } from "@/content/projects";
 
 export function ProjectDetail({ project }: { project: Project }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-4">
           <Tag>{project.status}</Tag>
           <span className="text-smoke text-sm">{project.timeframe}</span>
         </div>
         <h1 className="font-display text-5xl sm:text-6xl uppercase tracking-tight drop-shadow-[5px_5px_0_var(--color-thief-red)]">
           {project.title}
         </h1>
-        <p className="mt-4 max-w-prose text-lg text-paper/90">{project.summary}</p>
+        <p className="mt-6 max-w-prose text-lg text-paper/90">{project.summary}</p>
       </div>
 
-      <Panel cut="lg" className="p-8 max-w-2xl">
-        <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-2">
+      <Panel cut="lg" className="p-10 max-w-2xl">
+        <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-3">
           Role
         </p>
-        <p className="text-paper/90 mb-6">{project.role}</p>
+        <p className="text-paper/90 mb-8">{project.role}</p>
 
-        <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-2">
+        <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-3">
           Stack
         </p>
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-8">
           {project.stack.map((item) => (
             <Tag key={item}>{item}</Tag>
           ))}
@@ -33,10 +33,10 @@ export function ProjectDetail({ project }: { project: Project }) {
 
         {project.body && (
           <>
-            <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-2">
+            <p className="font-display text-sm uppercase tracking-widest text-thief-red-text mb-3">
               Write-up
             </p>
-            <p className="text-paper/90 leading-relaxed mb-6">{project.body}</p>
+            <p className="text-paper/90 leading-relaxed mb-8">{project.body}</p>
           </>
         )}
 
@@ -63,10 +63,10 @@ export function ProjectDetail({ project }: { project: Project }) {
         being buried mid-paragraph.
       */}
       {project.highlights && project.highlights.length > 0 && (
-        <div className="grid gap-6 sm:grid-cols-2 max-w-3xl">
+        <div className="grid gap-8 sm:grid-cols-2 max-w-3xl">
           {project.highlights.map((highlight, i) => (
-            <Panel key={highlight.title} cut="sm" index={i} className="p-6">
-              <p className="font-display text-lg uppercase tracking-tight text-thief-red-text mb-2">
+            <Panel key={highlight.title} cut="sm" index={i} className="p-7">
+              <p className="font-display text-lg uppercase tracking-tight text-thief-red-text mb-3">
                 {highlight.title}
               </p>
               <p className="text-paper/90 text-sm leading-relaxed">

@@ -17,11 +17,12 @@ import { withBasePath } from "@/lib/basePath";
  * placeholder shape to this photo.
  *
  * Each particle renders as one of four small glyphs (star, asterisk,
- * exclamation mark, dot) in one of three colors (red, cyan, and the
- * panel's own grey) — a deliberately different texture from a plain dot
- * field, per the brief. Glyph + color are assigned once per particle at
- * sample time and never change, so the mix reads as a fixed texture
- * rather than flickering per frame.
+ * exclamation mark, dot), colored from the actual pixel it was sampled
+ * from — so the cloud reconstructs the real photo's tones, not just its
+ * silhouette — with an occasional glyph recolored to the accent red/cyan
+ * for sparkle. Glyph + color are assigned once per particle at sample
+ * time and never change, so the mix reads as a fixed texture rather than
+ * flickering per frame.
  *
  * Everything here is a plain canvas + rAF loop, not Framer Motion — the
  * effect is per-particle, frame-by-frame physics driven by live cursor
@@ -43,23 +44,29 @@ const IDLE_AMPLITUDE = 1.1; // subtle ambient drift when the cursor isn't nearby
 const IDLE_SPEED = 0.0016;
 
 const GLYPHS = ["★", "✳", "!", "•"];
-// Mirrors --color-thief-red / --color-cyan / --color-smoke in globals.css.
-// Canvas fillStyle can't read CSS custom properties directly, so these are
-// the same values by hand — keep them in sync if those tokens ever move.
-const COLORS = [
-  { css: "rgba(220, 31, 46, 0.88)", weight: 0.5 }, // thief-red
-  { css: "rgba(46, 224, 232, 0.85)", weight: 0.3 }, // cyan
-  { css: "rgba(138, 129, 120, 0.85)", weight: 0.2 }, // smoke (the panel system's own grey)
+// Mirrors --color-thief-red / --color-cyan in globals.css. Canvas
+// fillStyle can't read CSS custom properties directly, so these are the
+// same values by hand — keep them in sync if those tokens ever move.
+// Sprinkled in on top of the true sampled color below, not instead of it —
+// the photo's real tones are what make the cloud read as the actual
+// portrait rather than an abstract silhouette; these are just sparkle.
+const ACCENT_COLORS = [
+  { css: "rgba(220, 31, 46, 0.9)", weight: 0.09 }, // thief-red
+  { css: "rgba(46, 224, 232, 0.85)", weight: 0.06 }, // cyan
 ];
 
-function pickColor(): string {
-  const r = Math.random();
+/** Most particles keep the exact color sampled from the photo at that
+ *  point (boosted slightly toward full opacity so the glyph strokes read
+ *  clearly against the dark background); a small minority get swapped for
+ *  an accent color instead, for texture. */
+function pickColor(r: number, g: number, b: number): string {
+  const roll = Math.random();
   let acc = 0;
-  for (const c of COLORS) {
+  for (const c of ACCENT_COLORS) {
     acc += c.weight;
-    if (r < acc) return c.css;
+    if (roll < acc) return c.css;
   }
-  return COLORS[0].css;
+  return `rgba(${r}, ${g}, ${b}, 0.92)`;
 }
 
 function pickGlyph(): string {
@@ -169,7 +176,8 @@ export function ParticlePortrait() {
       const next: Particle[] = [];
       for (let y = 0; y < cssH; y += GRID_SPACING) {
         for (let x = 0; x < cssW; x += GRID_SPACING) {
-          const alpha = data[(y * cssW + x) * 4 + 3];
+          const idx = (y * cssW + x) * 4;
+          const alpha = data[idx + 3];
           if (alpha > 128) {
             next.push({
               baseX: x,
@@ -180,7 +188,7 @@ export function ParticlePortrait() {
               vy: 0,
               seed: Math.random() * Math.PI * 2,
               glyph: pickGlyph(),
-              color: pickColor(),
+              color: pickColor(data[idx], data[idx + 1], data[idx + 2]),
             });
           }
         }
