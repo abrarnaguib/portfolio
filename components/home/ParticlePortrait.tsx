@@ -17,12 +17,15 @@ import { withBasePath } from "@/lib/basePath";
  * placeholder shape to this photo.
  *
  * Each particle renders as one of four small glyphs (star, asterisk,
- * exclamation mark, dot), colored from the actual pixel it was sampled
- * from — so the cloud reconstructs the real photo's tones, not just its
- * silhouette — with an occasional glyph recolored to the accent red/cyan
- * for sparkle. Glyph + color are assigned once per particle at sample
- * time and never change, so the mix reads as a fixed texture rather than
- * flickering per frame.
+ * exclamation mark, dot) in one of exactly three colors — red, cyan, and
+ * the panel's own grey; no others are allowed, on purpose. Which of the
+ * three a given particle gets isn't random: it's whichever of the three
+ * is the closest RGB match to the actual pixel sampled at that point, so
+ * the cloud still reconstructs the photo's real light/dark/hue structure
+ * (a three-color quantization/dither, not a free palette) instead of
+ * either the true photo colors or a random scatter. Glyph + color are
+ * assigned once per particle at sample time and never change, so the mix
+ * reads as a fixed texture rather than flickering per frame.
  *
  * Everything here is a plain canvas + rAF loop, not Framer Motion — the
  * effect is per-particle, frame-by-frame physics driven by live cursor
@@ -44,29 +47,33 @@ const IDLE_AMPLITUDE = 1.1; // subtle ambient drift when the cursor isn't nearby
 const IDLE_SPEED = 0.0016;
 
 const GLYPHS = ["★", "✳", "!", "•"];
-// Mirrors --color-thief-red / --color-cyan in globals.css. Canvas
+// The only three colors a particle is ever allowed to render in. Mirrors
+// --color-thief-red / --color-cyan / --color-smoke in globals.css — canvas
 // fillStyle can't read CSS custom properties directly, so these are the
-// same values by hand — keep them in sync if those tokens ever move.
-// Sprinkled in on top of the true sampled color below, not instead of it —
-// the photo's real tones are what make the cloud read as the actual
-// portrait rather than an abstract silhouette; these are just sparkle.
-const ACCENT_COLORS = [
-  { css: "rgba(220, 31, 46, 0.9)", weight: 0.09 }, // thief-red
-  { css: "rgba(46, 224, 232, 0.85)", weight: 0.06 }, // cyan
+// same values by hand (keep them in sync if those tokens ever move), each
+// paired with the plain 0-255 RGB triplet used for nearest-match distance.
+const COLORS = [
+  { r: 220, g: 31, b: 46, css: "rgba(220, 31, 46, 0.9)" }, // thief-red
+  { r: 46, g: 224, b: 232, css: "rgba(46, 224, 232, 0.85)" }, // cyan
+  { r: 138, g: 129, b: 120, css: "rgba(138, 129, 120, 0.85)" }, // smoke
 ];
 
-/** Most particles keep the exact color sampled from the photo at that
- *  point (boosted slightly toward full opacity so the glyph strokes read
- *  clearly against the dark background); a small minority get swapped for
- *  an accent color instead, for texture. */
+/** Nearest-color quantization: picks whichever of the three allowed
+ *  colors is closest (by squared RGB distance) to the pixel actually
+ *  sampled at that point, so the particle cloud stays limited to exactly
+ *  three colors while still tracking the photo's real light/dark/hue
+ *  structure instead of assigning colors at random. */
 function pickColor(r: number, g: number, b: number): string {
-  const roll = Math.random();
-  let acc = 0;
-  for (const c of ACCENT_COLORS) {
-    acc += c.weight;
-    if (roll < acc) return c.css;
+  let best = COLORS[0];
+  let bestDist = Infinity;
+  for (const c of COLORS) {
+    const dist = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = c;
+    }
   }
-  return `rgba(${r}, ${g}, ${b}, 0.92)`;
+  return best.css;
 }
 
 function pickGlyph(): string {

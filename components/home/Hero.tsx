@@ -125,7 +125,7 @@ export function Hero() {
   const ctaVariants = eyebrowVariants;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32 grid gap-12 md:grid-cols-[minmax(0,1fr)_320px] md:items-center">
+    <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32 grid gap-12 md:grid-cols-[minmax(0,1fr)_380px] md:items-center">
       <div>
         <motion.p
           initial={false}
@@ -207,7 +207,7 @@ export function Hero() {
         three particle colors (red, cyan, and that grey) read clearly
         against it.
       */}
-      <div className="mx-auto w-full max-w-xs md:order-first md:mx-0 md:max-w-none">
+      <div className="mx-auto w-full max-w-sm md:order-first md:mx-0 md:max-w-none">
         <Panel cut="lg" className="p-0 block aspect-[4/5] overflow-hidden">
           <div className="h-full w-full bg-ink">
             <ParticlePortrait />

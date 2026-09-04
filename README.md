@@ -1,6 +1,6 @@
 # Portfolio
 
-A personal portfolio site — projects, academic achievements, and skills — built with a Persona 5–inspired visual and motion language: diagonal wipes, cut-corner panels, and kinetic typography.
+A personal portfolio site — projects, academic achievements, and skills — built with a Persona 5–inspired visual.
 
 **Live site:** https://abrarnaguib.github.io/portfolio/
 
