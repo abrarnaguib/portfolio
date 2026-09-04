@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Nav } from "@/components/layout/Nav";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { ScreenShakeRoot } from "@/components/layout/ScreenShakeRoot";
+import { withBasePath } from "@/lib/basePath";
 import "./globals.css";
 
 // Display face — locked per the build plan. next/font/google downloads and
@@ -52,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="relative flex-1">
             <div aria-hidden className="absolute inset-0 -z-10">
               <Image
-                src="/images/hobekicity.jpg"
+                src={withBasePath("/images/hobekicity.jpg")}
                 alt=""
                 fill
                 priority

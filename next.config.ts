@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { BASE_PATH } from "./lib/basePath";
 
 // Static export — GitHub Pages (the eventual host, per the build plan §9)
 // serves flat files with no Node server behind it, so `next build` has to
@@ -10,15 +11,14 @@ import type { NextConfig } from "next";
 // riding on it yet.
 // GitHub Pages serves this as a project site at
 // https://<user>.github.io/portfolio/, not the domain root, so every
-// generated path (JS/CSS chunks, next/image URLs, next/link hrefs) needs
-// the "/portfolio" prefix baked in or the deployed site 404s on everything
-// but the homepage.
-const basePath = "/portfolio";
-
+// generated path (JS/CSS chunks, next/link hrefs) needs the "/portfolio"
+// prefix baked in or the deployed site 404s on everything but the
+// homepage. (next/image string srcs and any hand-written "/..." path still
+// need BASE_PATH prepended by hand — see lib/basePath.ts.)
 const nextConfig: NextConfig = {
   output: "export",
-  basePath,
-  assetPrefix: basePath,
+  basePath: BASE_PATH,
+  assetPrefix: BASE_PATH,
   // next/image's built-in optimizer resizes/re-encodes images through a
   // server route — there is no server in a static export, so every image
   // has to ship as-is instead.

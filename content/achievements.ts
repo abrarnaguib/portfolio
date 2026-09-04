@@ -1,3 +1,5 @@
+import { withBasePath } from "@/lib/basePath";
+
 export type AchievementCategory =
   | "academic"
   | "research"
@@ -29,7 +31,7 @@ export const achievements: Achievement[] = [
     timeframe: "2025 · 3rd Semester",
     description:
       "Won silver as part of a three-person team at the 2025 University Physics Competition, IUT — with Md Niamul Al Zihan and Shaheen Rahman Dibya, faculty-sponsored by Syed Rifat Raiyan.",
-    image: "/images/university-physics-competition.jpeg",
+    image: withBasePath("/images/university-physics-competition.jpeg"),
   },
   {
     id: "competitive-programming",
@@ -50,6 +52,6 @@ export const achievements: Achievement[] = [
     timeframe: "2026",
     description:
       "Received the IUT Excellence Award at the Islamic University of Technology's 2026 ceremony, recognizing outstanding academic standing.",
-    image: "/images/iut-excellence-award.jpeg",
+    image: withBasePath("/images/iut-excellence-award.jpeg"),
   },
 ];

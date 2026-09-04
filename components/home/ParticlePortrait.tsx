@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
+import { withBasePath } from "@/lib/basePath";
 
 /**
  * A canvas particle field shaped like a photo, with dots pushed away from
@@ -29,9 +30,8 @@ import { useReducedMotion } from "framer-motion";
  */
 
 // Loaded via a plain `Image()`, not next/image, so it doesn't get the
-// basePath auto-prepended — has to be hardcoded here to match
-// next.config.ts's basePath for the GitHub Pages deploy.
-const PHOTO_SRC = "/portfolio/images/portfolio-pic.png";
+// basePath auto-prepended — see lib/basePath.ts.
+const PHOTO_SRC = withBasePath("/images/portfolio-pic.png");
 
 const GRID_SPACING = 5; // px between candidate sample points, before alpha-masking
 const GLYPH_SIZE = 7; // px — font size the glyphs render at
